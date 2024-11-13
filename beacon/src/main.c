@@ -161,7 +161,7 @@ static void lsm6dsl_trigger_handler(const struct device *dev, const struct senso
 		/* Push data into FIFO */
 		k_fifo_put(&fifo_queue, data);
 
-		printk("Timestamp (ms): %u \n", data->timestamp);
+		// printk("Timestamp (ms): %u \n", data->timestamp);
 
 		gyro_x_out = gyro_x;
 		gyro_y_out = gyro_y;
@@ -345,12 +345,14 @@ int main(void)
 	int index = 0;
 	struct sensor_data_t *data = NULL;
 	int32_t timestamp = 0;
+	int ct = 0;
+	int32_t time = 0;
 
 	while (1) {
 		if (fifo_count <= 0) {
 			continue;
 		}
-		printk("Current fifo_count: %d\n", fifo_count);
+		// printk("Current fifo_count: %d\n", fifo_count);
 
 		// num_data_get = MIN(fifo_count, 2);
 
@@ -358,7 +360,7 @@ int main(void)
 			/* Read sensor value and update sensor_data */
 			/* Pop data from FIFO */
 			data = (struct sensor_data_t *)k_fifo_get(&fifo_queue, K_FOREVER);
-			index = i * 10;
+			index = i * 11;
 			/* Erase previous */
 			// printk("\0033\014");
 			// printk("Process data......");
@@ -367,22 +369,22 @@ int main(void)
 				printk("Error: Memory allocation failed!\n");
 				return -1;
 			}
-			data_t dataX, dataY, dataZ;
+			uint16_t dataX, dataY, dataZ;
 
 			/* Assign flt_accelx to sensor_data[0:3] */
-			dataX.input = data->accel_x;
-			sensor_data[1 + index] = dataX.output & 0xFF;
-			sensor_data[0 + index] = (dataX.output >> 8) & 0xFF;
+			dataX = data->accel_x;
+			sensor_data[1 + index] = dataX & 0xFF;
+			sensor_data[0 + index] = (dataX >> 8) & 0xFF;
 
 			/* Assign flt_accely to sensor_data[4:7] */
-			dataY.input = data->accel_y;
-			sensor_data[3 + index] = dataY.output & 0xFF;
-			sensor_data[2 + index] = (dataY.output >> 8) & 0xFF;
+			dataY = data->accel_y;
+			sensor_data[3 + index] = dataY & 0xFF;
+			sensor_data[2 + index] = (dataY >> 8) & 0xFF;
 
 			/* Assign flt_accelz to sensor_data[8:11] */
-			dataZ.input = data->accel_z;
-			sensor_data[5 + index] = dataZ.output & 0xFF;
-			sensor_data[4 + index] = (dataZ.output >> 8) & 0xFF;
+			dataZ = data->accel_z;
+			sensor_data[5 + index] = dataZ & 0xFF;
+			sensor_data[4 + index] = (dataZ >> 8) & 0xFF;
 
 			// sprintf(out_str, "accel x:%f ms/2 y:%f ms/2 z:%f ms/2",
 			// (double)flt_accelx, (double)flt_accely, (double)flt_accelz);
@@ -407,14 +409,14 @@ int main(void)
 				sensor_data[10 + index] = timestamp & 0xFF;
 				sensor_data[9 + index] = (timestamp >> 8) & 0xFF;
 				sensor_data[8 + index] = (timestamp >> 16) & 0xFF;
-				printk("Broadcase Timestamp (ms): %u and Message Timestamp: %u \n",
-			       k_uptime_get_32(), timestamp);
+				// printk("Broadcase Timestamp (ms): %u and Message Timestamp: %u \n",
+			    //    k_uptime_get_32(), timestamp);
 			}
 			else {
 				timestamp = data->timestamp - timestamp; // Get system uptime in ms
 				sensor_data[8 + index] = timestamp & 0xFF;
-				printk("Broadcase Timestamp (ms): %u and Message Timestamp: %u == %u \n",
-			       k_uptime_get_32(), timestamp, sensor_data[8 + index]);
+				// printk("Broadcase Timestamp (ms): %u and Message Timestamp: %u == %u \n",
+			    //    k_uptime_get_32(), timestamp, sensor_data[8 + index]);
 			}
 
 			// Print sensor_data[14] to sensor_data[17] in decimal
@@ -445,6 +447,16 @@ int main(void)
 			// 	sensor_data[i]++;
 			// }
 
+			if (ct == 0){
+				time = data->timestamp;
+			}
+			if (ct == 1000){
+				printk("Broadcase Timestamp (ms): %f \n", ((double)(data->timestamp - time)/1000));
+				ct = 0;
+			}
+			else {
+				ct += 1;
+			}
 			/* Free memory */
 			k_free(data);
 		}
